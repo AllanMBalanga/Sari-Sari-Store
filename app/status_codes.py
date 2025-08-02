@@ -39,5 +39,27 @@ class Validator:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=detail
             )
+        
+    def balance_exists(self, balance, balance_id: int = None):
+        if not balance:
+            if balance_id:
+                detail = f"Balance with id {balance_id} was not found"
+            else:
+                detail = "Balance was not found"
 
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail
+            )
 
+    def transaction_exists(self, transaction, transaction_id: int = None):
+        if not transaction:
+            if transaction_id:
+                detail = f"Transaction with id {transaction_id} was not found"
+            else:
+                detail = "Transaction was not found"
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail
+            )

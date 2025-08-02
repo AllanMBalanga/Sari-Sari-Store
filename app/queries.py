@@ -1,5 +1,5 @@
-from httpx import delete
-
+from fastapi import HTTPException, status
+from decimal import Decimal
 
 class Queries:
     def __init__(self, db):
@@ -21,14 +21,19 @@ class Queries:
     
 
     #PATCH
-    def dynamic_patch_query(self, table: str, data: dict, table_id: int, updated_by: int):
+    def dynamic_patch_query(self, table: str, data: dict, table_id: int, updated_by: int, customer_id: int = None, balance_id: int = None):
         data["updated_by"] = updated_by
 
         set_clause = ", ".join(f"{k} = %s" for k in data.keys())    # Sanitize column names (basic safeguard against SQL injection)
 
-        sql = f"UPDATE {table} SET {set_clause} WHERE id = %s AND deleted_at IS NULL"        # Build base SQL
+        sql = f"UPDATE {table} SET {set_clause}"        # Build base SQL
         
-        values = tuple(data.values()) + (table_id,)
+        if table == "transactions" and customer_id is not None and balance_id is not None:
+            sql += " WHERE id =  %s AND customer_id = %s AND balance_id = %s AND deleted_at IS NULL"
+            values = tuple(data.values()) + (table_id, customer_id, balance_id)
+        else:
+            sql += " WHERE id = %s AND deleted_at IS NULL"
+            values = tuple(data.values()) + (table_id,)
 
         self.cursor.execute(sql, values)
 
@@ -43,46 +48,84 @@ class Queries:
 
 
     #GET ALL/BY_ID
-    def get_customers(self, customer_id: int = None):
-        if customer_id:
-            self.cursor.execute("SELECT * FROM customers WHERE id = %s AND deleted_at IS NULL", (customer_id,))
+    def get_request(self, table: str, table_id: int = None):
+        if table_id:
+            self.cursor.execute(f"SELECT * FROM {table} WHERE id = %s AND deleted_at IS NULL", (table_id,))
             return self.cursor.fetchone()
         else:
-            self.cursor.execute("SELECT * FROM customers WHERE deleted_at IS NULL")
+            self.cursor.execute(f"SELECT * FROM {table} WHERE deleted_at IS NULL")
             return self.cursor.fetchall()
 
+    def get_transactions(self, table_id: int = None, customer_id: int = None, balance_id: int = None):
+        if table_id:
+            self.cursor.execute(f"SELECT * FROM transactions WHERE id = %s AND customer_id = %s AND balance_id = %s AND deleted_at IS NULL", (
+                table_id, customer_id, balance_id)
+            )
+            return self.cursor.fetchone()
+        else:
+            self.cursor.execute(f"SELECT * FROM transactions WHERE customer_id = %s AND balance_id = %s AND deleted_at IS NULL", (customer_id, balance_id))
+            return self.cursor.fetchall()
+        
 
     #POST/CREATE REQUEST
-    def created_customer(self):
-        self.cursor.execute("SELECT * FROM customers WHERE id = LAST_INSERT_ID()")
+    def created_request(self, table: str):
+        self.cursor.execute(f"SELECT * FROM {table} WHERE id = LAST_INSERT_ID()")
         return self.cursor.fetchone()
     
-    def created_balance(self):
-        self.cursor.execute("SELECT * FROM balances WHERE id = LAST_INSERT_ID()")
-        return self.cursor.fetchone()
-    
-    def created_transaction(self):
-        self.cursor.execute("SELECT * FROM transactions WHERE id = LAST_INSERT_ID()")
-        return self.cursor.fetchone()
+    #PUT REQUEST
+    def update_balance_total(self, balance_id: int, customer_id: int, new_total: float, updated_by: int):
+        self.cursor.execute("""
+            UPDATE balances SET total = %s, updated_by = %s 
+            WHERE id = %s AND customer_id = %s AND deleted_at IS NULL
+        """, (new_total, updated_by, balance_id, customer_id))
+        self.conn.commit()
 
-    def created_items(self):
-        self.cursor.execute("SELECT * FROM items WHERE id = LAST_INSERT_ID()")
-        return self.cursor.fetchone()
-    
-    def created_orders(self):
-        self.cursor.execute("SELECT * FROM orders WHERE id = LAST_INSERT_ID()")
-        return self.cursor.fetchone()
-    
-    def created_order_items(self):
-        self.cursor.execute("SELECT * FROM order_items WHERE id = LAST_INSERT_ID()")
-        return self.cursor.fetchone()
+    #Transaction balance
+    def adjust_balance_total(self, existing_balance: dict, existing_transaction: dict, values: dict) -> float:
+        # Get new type and amount from values or fallback to existing ones
+        new_type = values.get("type", existing_transaction["type"])
+        new_amount = Decimal(str(values.get("amount", existing_transaction["amount"])))
+
+
+        # Undo the original transaction
+        if existing_transaction["type"] == "withdraw":
+            existing_balance["total"] += existing_transaction["amount"]
+        else:
+            existing_balance["total"] -= existing_transaction["amount"]
+
+        # Apply the new transaction
+        if new_type == "withdraw":
+            if existing_balance["total"] - new_amount < 0:
+                raise HTTPException(
+                    status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    detail="Insufficient balance"
+                )
+            existing_balance["total"] -= new_amount
+        else:
+            existing_balance["total"] += new_amount
+
+        return existing_balance["total"]
 
     #HARD/SOFT DELETE
-    def hard_delete_customers(self, customer_id: int):
-        self.cursor.execute("DELETE FROM customers WHERE id = %s", (customer_id,))
-        self.conn.commit()
+    def hard_delete(self, table: str, table_id: int, customer_id: int = None, balance_id: int = None):
+        if customer_id and balance_id:
+            self.cursor.execute(f"DELETE FROM {table} WHERE id = %s AND customer_id = %s AND balance_id = %s", (
+                table_id, customer_id, balance_id
+                )
+            )
+            self.conn.commit()
+        else:    
+            self.cursor.execute(f"DELETE FROM {table} WHERE id = %s", (table_id,))
+            self.conn.commit()
     
-    def soft_delete_customers(self, user_id: int, delete_id: int):
-        self.cursor.execute("UPDATE customers SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s", (user_id, delete_id))
-        self.conn.commit()
+    def soft_delete(self, table: str, user_id: int, table_id: int, customer_id: int = None, balance_id: int = None):
+        if customer_id and balance_id:
+            self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND customer_id = %s AND balance_id = %s AND deleted_at IS NULL", (
+                user_id, table_id, customer_id, balance_id
+                )
+            )
+            self.conn.commit()
+        else:
+            self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND deleted_at IS NULL", (user_id, table_id))
+            self.conn.commit()
 

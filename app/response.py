@@ -28,6 +28,12 @@ class TransactionResponse(BaseModel):
     amount: int
     created_at: datetime
 
+#TRANSACTIONS POST
+class TransactionBalanceResponse(BaseModel):
+    transaction: TransactionResponse
+    balance: BalanceResponse
+
+
 class OrderResponse(BaseModel):
     id: int
     customer_id: int
@@ -73,6 +79,10 @@ class TransactionAdminResponse(TransactionResponse):
     deleted_at: Optional[datetime] = None
     updated_by: Optional[str] = None
     deleted_by: Optional[str] = None
+
+class TransactionBalanceAdminResponse(BaseModel):
+    transaction: TransactionAdminResponse
+    balance: BalanceAdminResponse
 
 class OrderAdminResponse(OrderResponse):
     updated_at: Optional[datetime] = None
