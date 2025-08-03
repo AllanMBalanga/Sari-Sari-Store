@@ -43,7 +43,7 @@ class Database:
                 role ENUM('user', 'admin') NOT NULL,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL,
                 deleted_at TIMESTAMP NULL,
                 updated_by VARCHAR(30),
                 deleted_by VARCHAR(30)
@@ -56,7 +56,7 @@ class Database:
                 total DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL,
                 deleted_at TIMESTAMP NULL,
                 updated_by VARCHAR(30),
                 deleted_by VARCHAR(30),
@@ -74,7 +74,7 @@ class Database:
                 amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL,
                 deleted_at TIMESTAMP NULL,
                 updated_by VARCHAR(30),
                 deleted_by VARCHAR(30),
@@ -95,7 +95,7 @@ class Database:
                 store_notes TEXT,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL,
                 deleted_at TIMESTAMP NULL,
                 updated_by VARCHAR(30),
                 deleted_by VARCHAR(30),
@@ -109,14 +109,15 @@ class Database:
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 name VARCHAR(60) NOT NULL,
                 quantity INT NOT NULL,
+                sold INT NOT NULL DEFAULT 0,
                 orig_price DECIMAL(10, 2) NOT NULL,
-                total_orig_price DECIMAL(10, 2) GENERATED ALWAYS AS (quantity * orig_price) STORED,
                 selling_price DECIMAL(10, 2) NOT NULL,
+                total_orig_price DECIMAL(10, 2) GENERATED ALWAYS AS (quantity * orig_price) STORED,
                 total_selling_price DECIMAL(10, 2) GENERATED ALWAYS AS (quantity * selling_price) STORED,
-                profit DECIMAL(10, 2) GENERATED ALWAYS AS ((quantity * selling_price) - (quantity * orig_price)) STORED,
+                profit DECIMAL(10, 2) GENERATED ALWAYS AS (-(quantity * orig_price)) STORED,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL,
                 deleted_at TIMESTAMP NULL,
                 updated_by VARCHAR(30),
                 deleted_by VARCHAR(30)
@@ -132,7 +133,7 @@ class Database:
                 subtotal DECIMAL(10, 2) GENERATED ALWAYS AS (quantity * unit_price) STORED,
 
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                updated_at TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP NULL,
                 deleted_at TIMESTAMP NULL,
                 updated_by VARCHAR(30),
                 deleted_by VARCHAR(30),

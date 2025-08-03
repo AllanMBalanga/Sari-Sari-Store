@@ -39,9 +39,10 @@ def put_balance(customer_id: int, balance: Balance, current_user: TokenData = De
         validate.customer_exists(existing_customer, customer_id)
 
         existing_balance = query.get_request("balances", customer_id)
+        print(existing_balance)
         validate.balance_exists(existing_balance, customer_id)
 
-        db.cursor.execute("UPDATE balances SET total = %s, updated_by = %s WHERE id = %s AND deleted_at IS NULL", (
+        db.cursor.execute("UPDATE balances SET total = %s, updated_by = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s AND deleted_at IS NULL", (
             balance.total,
             current_user.id,
             customer_id,
@@ -67,12 +68,13 @@ def hard_delete(customer_id: int, current_user: TokenData = Depends(get_current_
         validate.required_roles(current_user.role, ["admin"])
 
         existing_customer = query.get_request("customers", customer_id)
-        validate.customer_exists(existing_customer)
+        validate.customer_exists(existing_customer, customer_id)
 
         existing_balance = query.get_request("balances", customer_id)
         validate.balance_exists(existing_balance, customer_id)
 
         query.hard_delete("balances", customer_id)
+        db.conn.commit()
 
         return
 
@@ -92,12 +94,13 @@ def soft_delete(customer_id: int, current_user: TokenData = Depends(get_current_
             validate.logged_in_user(current_user.id, customer_id)
 
         existing_customer = query.get_request("customers", customer_id)
-        validate.customer_exists(existing_customer)
+        validate.customer_exists(existing_customer, customer_id)
 
         existing_balance = query.get_request("balances", customer_id)
         validate.balance_exists(existing_balance, customer_id)
         
         query.soft_delete("balances", current_user.id, customer_id)
+        db.conn.commit()
 
         return {"detail": f"Balances with id {customer_id} softly deleted"}
     

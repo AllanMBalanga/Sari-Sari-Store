@@ -94,6 +94,7 @@ class ItemAdminResponse(BaseModel):
     id: int
     name: str
     quantity: int
+    sold: int
     orig_price: float
     total_orig_price: float
     selling_price: float

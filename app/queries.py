@@ -25,6 +25,7 @@ class Queries:
         data["updated_by"] = updated_by
 
         set_clause = ", ".join(f"{k} = %s" for k in data.keys())    # Sanitize column names (basic safeguard against SQL injection)
+        set_clause += ", updated_at = CURRENT_TIMESTAMP"
 
         sql = f"UPDATE {table} SET {set_clause}"        # Build base SQL
         
@@ -75,7 +76,7 @@ class Queries:
     #PUT REQUEST
     def update_balance_total(self, balance_id: int, customer_id: int, new_total: float, updated_by: int):
         self.cursor.execute("""
-            UPDATE balances SET total = %s, updated_by = %s 
+            UPDATE balances SET total = %s, updated_by = %s, updated_at = CURRENT_TIMESTAMP 
             WHERE id = %s AND customer_id = %s AND deleted_at IS NULL
         """, (new_total, updated_by, balance_id, customer_id))
         self.conn.commit()
@@ -113,10 +114,8 @@ class Queries:
                 table_id, customer_id, balance_id
                 )
             )
-            self.conn.commit()
         else:    
             self.cursor.execute(f"DELETE FROM {table} WHERE id = %s", (table_id,))
-            self.conn.commit()
     
     def soft_delete(self, table: str, user_id: int, table_id: int, customer_id: int = None, balance_id: int = None):
         if customer_id and balance_id:
@@ -124,8 +123,7 @@ class Queries:
                 user_id, table_id, customer_id, balance_id
                 )
             )
-            self.conn.commit()
         else:
             self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND deleted_at IS NULL", (user_id, table_id))
-            self.conn.commit()
+
 

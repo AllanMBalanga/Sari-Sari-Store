@@ -24,7 +24,7 @@ class Item(BaseModel):
     quantity: int
     orig_price: float
     selling_price: float
-    
+
 class OrderItem(BaseModel):
     quantity: int
 

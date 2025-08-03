@@ -53,9 +53,6 @@ def create_transaction(customer_id: int, balance_id: int, transaction: Transacti
                 transaction.amount
             )
         )
-        db.conn.commit()
-
-        created_transaction = query.created_request("transactions")
 
         total_balance = existing_balance["total"]
         transaction_amount = Decimal(str(transaction.amount))
@@ -71,6 +68,7 @@ def create_transaction(customer_id: int, balance_id: int, transaction: Transacti
         db.cursor.execute("UPDATE balances SET total = %s WHERE id = %s", (new_balance, customer_id))    
         db.conn.commit()
 
+        created_transaction = query.created_request("transactions")
         updated_balance = query.get_request("balances", customer_id)
         
         return {
@@ -121,7 +119,7 @@ def put_transaction(customer_id: int, balance_id: int, transaction_id: int, tran
         #reset balance before the transaction
         existing_balance["total"] = query.adjust_balance_total(existing_balance, existing_transaction, transaction.dict())
 
-        db.cursor.execute("UPDATE transactions SET type = %s, amount = %s, updated_by = %s WHERE id = %s AND customer_id = %s AND balance_id = %s", (
+        db.cursor.execute("UPDATE transactions SET type = %s, amount = %s, updated_by = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s AND customer_id = %s AND balance_id = %s", (
                 transaction.type, transaction.amount, current_user.id, transaction_id, customer_id, balance_id
             )
         )
@@ -164,6 +162,7 @@ def patch_transaction(customer_id: int, balance_id: int, transaction_id: int, tr
         existing_balance["total"] = query.adjust_balance_total(existing_balance, existing_transaction, excluded_values)
 
         query.dynamic_patch_query("transactions", excluded_values, transaction_id, current_user.id, customer_id, balance_id)
+        db.conn.commit()
         updated_transaction = query.get_transactions(transaction_id, customer_id, balance_id)
 
         query.update_balance_total(balance_id, customer_id, existing_balance["total"], current_user.id)
@@ -197,6 +196,7 @@ def hard_delete_transaction(customer_id: int, balance_id: int, transaction_id: i
         validate.transaction_exists(existing_transaction, transaction_id)
 
         query.hard_delete("transactions", transaction_id, customer_id, balance_id)
+        db.conn.commit()
 
         return 
 
@@ -223,6 +223,7 @@ def soft_delete_transaction(customer_id: int, balance_id: int, transaction_id: i
         validate.transaction_exists(existing_transaction, transaction_id)
 
         query.soft_delete("transactions", current_user.id, transaction_id, customer_id, balance_id)
+        db.conn.commit()
 
         return {"detail": "Transaction soft deleted successfully"}
 

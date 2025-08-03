@@ -63,3 +63,15 @@ class Validator:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail=detail
             )
+        
+    def item_exists(self, item, item_id: int = None):
+        if not item:
+            if item_id:
+                detail = f"IItem with id {item_id} was not found"
+            else:
+                detail = "Item was not found"
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail
+            )

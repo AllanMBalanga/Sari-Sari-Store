@@ -43,18 +43,18 @@ def create_customer(customer: Customer):
                         "user"
             )
         )
-        db.conn.commit()
 
-        created_customer = query.created_request("customers")
+        customer_id = db.cursor.lastrowid
 
         db.cursor.execute("""INSERT INTO BALANCES (customer_id, total) 
                         VALUES (%s, %s)""", (
-                        created_customer["id"],
+                        customer_id,
                         0.00
             )
         )
         db.conn.commit()
 
+        created_customer = query.created_request("customers")
         created_balance = query.created_request("balances")
 
         return {
@@ -89,10 +89,10 @@ def put_customer(customer_id: int, customer: Customer, current_user: TokenData =
             validate.logged_in_user(current_user.id, customer_id)
 
         existing_customer = query.get_request("customers", customer_id)
-        validate.customer_exists(existing_customer)
+        validate.customer_exists(existing_customer, customer_id)
 
         customer.password = hash(customer.password)
-        db.cursor.execute("UPDATE customers SET email = %s, password = %s, first_name = %s, last_name = %s, updated_by = %s WHERE id = %s AND deleted_at IS NULL", (
+        db.cursor.execute("UPDATE customers SET email = %s, password = %s, first_name = %s, last_name = %s, updated_by = %s, updated_at = CURRENT_TIMESTAMP WHERE id = %s AND deleted_at IS NULL", (
                 customer.email,
                 customer.password,
                 customer.first_name,
@@ -123,7 +123,7 @@ def patch_customer(customer_id: int, customer: CustomerPatch, current_user: Toke
             validate.logged_in_user(current_user.id, customer_id)
 
         existing_customer = query.get_request("customers", customer_id)
-        validate.customer_exists(existing_customer)
+        validate.customer_exists(existing_customer, customer_id)
 
         if customer.password:
             customer.password = hash(customer.password)
@@ -152,9 +152,10 @@ def hard_delete(customer_id: int, current_user: TokenData = Depends(get_current_
         validate.required_roles(current_user.role, ["admin"])
 
         existing_customer = query.get_request("customers", customer_id)
-        validate.customer_exists(existing_customer)
+        validate.customer_exists(existing_customer, customer_id)
 
         query.hard_delete("customers", customer_id)
+        db.conn.commit()
 
         return
 
@@ -174,10 +175,11 @@ def soft_delete(customer_id: int, current_user: TokenData = Depends(get_current_
             validate.logged_in_user(current_user.id, customer_id)
 
         existing_customer = query.get_request("customers", customer_id)
-        validate.customer_exists(existing_customer)
+        validate.customer_exists(existing_customer, customer_id)
 
         query.soft_delete("customers", current_user.id, customer_id)
         query.soft_delete("balances", current_user.id, customer_id)
+        db.conn.commit()
 
         return {"detail": f"Customer with id {customer_id} and related resources softly deleted"}
     
