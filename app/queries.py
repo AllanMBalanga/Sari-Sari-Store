@@ -32,6 +32,9 @@ class Queries:
         if table == "transactions" and customer_id is not None and balance_id is not None:
             sql += " WHERE id =  %s AND customer_id = %s AND balance_id = %s AND deleted_at IS NULL"
             values = tuple(data.values()) + (table_id, customer_id, balance_id)
+        elif table == "orders" and customer_id is not None:
+            sql += " WHERE id = %s AND customer_id = %s AND deleted_at IS NULL"
+            values = tuple(data.values()) + (table_id, customer_id)
         else:
             sql += " WHERE id = %s AND deleted_at IS NULL"
             values = tuple(data.values()) + (table_id,)
@@ -66,7 +69,14 @@ class Queries:
         else:
             self.cursor.execute(f"SELECT * FROM transactions WHERE customer_id = %s AND balance_id = %s AND deleted_at IS NULL", (customer_id, balance_id))
             return self.cursor.fetchall()
-        
+    
+    def get_orders(self, table_id: int = None, customer_id: int = None):
+        if table_id:
+            self.cursor.execute("SELECT * FROM orders WHERE id = %s AND customer_id = %s AND deleted_at IS NULL", (table_id, customer_id))
+            return self.cursor.fetchone()
+        else:
+            self.cursor.execute("SELECT * FROM orders WHERE customer_id = %s AND deleted_at IS NULL", (customer_id,))
+            return self.cursor.fetchall()
 
     #POST/CREATE REQUEST
     def created_request(self, table: str):
@@ -114,6 +124,11 @@ class Queries:
                 table_id, customer_id, balance_id
                 )
             )
+        elif customer_id:
+            self.cursor.execute(f"DELETE FROM {table} WHERE id = %s AND customer_id = %s", (
+                table_id, customer_id
+            )
+        )
         else:    
             self.cursor.execute(f"DELETE FROM {table} WHERE id = %s", (table_id,))
     
@@ -121,6 +136,11 @@ class Queries:
         if customer_id and balance_id:
             self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND customer_id = %s AND balance_id = %s AND deleted_at IS NULL", (
                 user_id, table_id, customer_id, balance_id
+                )
+            )
+        elif customer_id:
+            self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND customer_id = %s AND deleted_at IS NULL", (
+                user_id, table_id, customer_id
                 )
             )
         else:

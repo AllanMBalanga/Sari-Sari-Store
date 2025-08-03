@@ -38,8 +38,9 @@ class OrderResponse(BaseModel):
     id: int
     customer_id: int
     payment_method: Literal["cash", "balance"]
+    note: str
     total: float
-    store_notes: str
+    store_notes: Optional[str] = None
     created_at: datetime
 
 class ItemResponse(BaseModel):

@@ -67,9 +67,33 @@ class Validator:
     def item_exists(self, item, item_id: int = None):
         if not item:
             if item_id:
-                detail = f"IItem with id {item_id} was not found"
+                detail = f"Item with id {item_id} was not found"
             else:
                 detail = "Item was not found"
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail
+            )
+    
+    def order_exists(self, order, order_id: int = None):
+        if not order:
+            if order_id:
+                detail = f"Order with id {order_id} was not found"
+            else:
+                detail = "Order was not found"
+
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=detail
+            )
+    
+    def order_item_exists(self, order_item, order_item_id: int = None):
+        if not order_item:
+            if order_item_id:
+                detail = f"Order item with id {order_item_id} was not found"
+            else:
+                detail = "Order item was not found"
 
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

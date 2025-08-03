@@ -26,6 +26,7 @@ class Item(BaseModel):
     selling_price: float
 
 class OrderItem(BaseModel):
+    item_id: int
     quantity: int
 
 #PATCH
@@ -53,6 +54,7 @@ class ItemPatch(BaseModel):
     selling_price: Optional[float] = None
 
 class OrderItemPatch(BaseModel):
+    item_id: Optional[int] = None
     quantity: Optional[int] = None
 
 
