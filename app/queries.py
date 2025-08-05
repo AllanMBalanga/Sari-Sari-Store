@@ -35,20 +35,14 @@ class Queries:
         elif table == "orders" and customer_id is not None:
             sql += " WHERE id = %s AND customer_id = %s AND deleted_at IS NULL"
             values = tuple(data.values()) + (table_id, customer_id)
+        elif table == "order_items" and customer_id is not None:    #customer_id = order_id
+            sql += " WHERE id = %s AND order_id = %s AND deleted_at IS NULL"
+            values = tuple(data.values()) + (table_id, customer_id)
         else:
             sql += " WHERE id = %s AND deleted_at IS NULL"
             values = tuple(data.values()) + (table_id,)
 
         self.cursor.execute(sql, values)
-
-        # if table == "admissions" and patient_id is not None and doctor_id is not None:          # Add WHERE clause based on table and optional IDs
-        #     sql += " WHERE id = %s AND patient_id = %s AND doctor_id = %s"
-        #     values = tuple(data.values()) + (table_id, patient_id, doctor_id)
-        # else:
-        #     sql += " WHERE id = %s"
-        #     values = tuple(data.values()) + (table_id,)
-
-        # self.cursor.execute(sql, values)
 
 
     #GET ALL/BY_ID
@@ -78,6 +72,14 @@ class Queries:
             self.cursor.execute("SELECT * FROM orders WHERE customer_id = %s AND deleted_at IS NULL", (customer_id,))
             return self.cursor.fetchall()
 
+    def get_order_items(self, table_id: int = None, order_id: int = None):
+        if table_id:
+            self.cursor.execute("SELECT * FROM order_items WHERE id = %s AND order_id = %s AND deleted_at IS NULL", (table_id, order_id))
+            return self.cursor.fetchone()
+        else:
+            self.cursor.execute("SELECT * FROM order_items WHERE order_id = %s AND deleted_at IS NULL", (order_id,))
+            return self.cursor.fetchall()
+        
     #POST/CREATE REQUEST
     def created_request(self, table: str):
         self.cursor.execute(f"SELECT * FROM {table} WHERE id = LAST_INSERT_ID()")
@@ -118,7 +120,7 @@ class Queries:
         return existing_balance["total"]
 
     #HARD/SOFT DELETE
-    def hard_delete(self, table: str, table_id: int, customer_id: int = None, balance_id: int = None):
+    def hard_delete(self, table: str, table_id: int, customer_id: int = None, balance_id: int = None, order_id: int = None):
         if customer_id and balance_id:
             self.cursor.execute(f"DELETE FROM {table} WHERE id = %s AND customer_id = %s AND balance_id = %s", (
                 table_id, customer_id, balance_id
@@ -129,10 +131,15 @@ class Queries:
                 table_id, customer_id
             )
         )
+        elif order_id:
+            self.cursor.execute(f"DELETE FROM {table} WHERE id = %s AND order_id = %s", (
+                table_id, order_id
+            )
+        )
         else:    
             self.cursor.execute(f"DELETE FROM {table} WHERE id = %s", (table_id,))
     
-    def soft_delete(self, table: str, user_id: int, table_id: int, customer_id: int = None, balance_id: int = None):
+    def soft_delete(self, table: str, user_id: int, table_id: int, customer_id: int = None, balance_id: int = None, order_id: int = None):
         if customer_id and balance_id:
             self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND customer_id = %s AND balance_id = %s AND deleted_at IS NULL", (
                 user_id, table_id, customer_id, balance_id
@@ -143,6 +150,10 @@ class Queries:
                 user_id, table_id, customer_id
                 )
             )
+        elif order_id:
+            self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND order_id = %s AND deleted_at IS NULL", (
+                user_id, table_id, order_id
+            ))
         else:
             self.cursor.execute(f"UPDATE {table} SET deleted_at = CURRENT_TIMESTAMP, deleted_by = %s WHERE id = %s AND deleted_at IS NULL", (user_id, table_id))
 

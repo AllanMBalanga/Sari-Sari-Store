@@ -22,6 +22,9 @@ def get_orders(customer_id: int, current_user: TokenData = Depends(get_current_u
     if current_user.role == "user":
         validate.logged_in_user(current_user.id, customer_id)
 
+    existing_customer = query.get_request("customers", customer_id)
+    validate.customer_exists(existing_customer, customer_id)
+
     orders = query.get_orders(customer_id=customer_id)
 
     return query.response_list(current_user, orders, OrderResponse, OrderAdminResponse)
@@ -98,6 +101,7 @@ def put_orders(customer_id: int, order_id: int, order: Order, current_user: Toke
 
     except Exception as e:
         print(f"{e}")
+        db.conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 
@@ -134,6 +138,7 @@ def patch_orders(customer_id: int, order_id: int, order: OrderPatch, current_use
 
     except Exception as e:
         print(f"{e}")
+        db.conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 @router.delete("/{order_id}", status_code=status.HTTP_204_NO_CONTENT)
@@ -157,6 +162,7 @@ def hard_delete(customer_id: int, order_id: int, current_user: TokenData = Depen
 
     except Exception as e:
         print(f"{e}")
+        db.conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")
 
 @router.delete("/{order_id}/delete", status_code=status.HTTP_200_OK)
@@ -182,4 +188,5 @@ def soft_delete(customer_id: int, order_id: int, current_user: TokenData = Depen
 
     except Exception as e:
         print(f"{e}")
+        db.conn.rollback()
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Internal Server Error")

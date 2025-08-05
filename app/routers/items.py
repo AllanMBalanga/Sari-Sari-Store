@@ -1,3 +1,4 @@
+from functools import total_ordering
 from fastapi import APIRouter, status, HTTPException, Depends
 from ..oauth2 import get_current_user
 from ..body import Item, ItemPatch, TokenData
@@ -29,6 +30,10 @@ def get_items(current_user: TokenData = Depends(get_current_user)):
 def create_customer(item: Item, current_user: TokenData = Depends(get_current_user)):
     try:
         validate.required_roles(current_user.role, ["admin"])
+
+        # total_orig_price = item.quantity * item.orig_price
+        # total_selling_price = item.quantity * item.selling_price
+        # profit = item.quantity * item.orig_price * -1
 
         db.cursor.execute(""" INSERT INTO items(name, quantity, orig_price, selling_price) 
             VALUES (%s, %s, %s, %s)""", (
